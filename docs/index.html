@@ -117,26 +117,23 @@
       padding: 7rem 2rem 5rem;
     }
 
-    .h-bg {
-      position: absolute; inset: 0;
-      background:
-        radial-gradient(ellipse 80% 60% at 50% 50%, rgba(0,255,65,0.045) 0%, transparent 70%),
-        radial-gradient(ellipse 40% 40% at 85% 15%, rgba(191,0,255,0.025) 0%, transparent 60%);
+    #hero-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
     }
 
-    .h-grid {
+    .h-bg {
       position: absolute; inset: 0;
-      background-image:
-        linear-gradient(rgba(0,255,65,0.035) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0,255,65,0.035) 1px, transparent 1px);
-      background-size: 56px 56px;
-      mask-image: radial-gradient(ellipse at center, black 25%, transparent 75%);
+      background: radial-gradient(ellipse 70% 50% at 50% 50%, rgba(0,255,65,0.03) 0%, transparent 70%);
     }
 
     .h-sym {
       position: absolute;
       font-size: 42vw;
-      opacity: 0.018;
+      opacity: 0.015;
       color: var(--green);
       animation: slow-spin 80s linear infinite;
       user-select: none;
@@ -617,8 +614,8 @@
 
   <!-- ░░ HERO ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ -->
   <section id="hero">
+    <canvas id="hero-canvas"></canvas>
     <div class="h-bg"></div>
-    <div class="h-grid"></div>
     <div class="h-sym">☣</div>
     <div class="hero-content">
       <p class="hero-eyebrow">// VIRAL INCIDENT REPORT — PROJECT P.H. //</p>
@@ -950,6 +947,128 @@
   </footer>
 
   <script>
+    // ── Node network background ───────────────────
+    (function () {
+      const canvas = document.getElementById('hero-canvas');
+      const ctx    = canvas.getContext('2d');
+      const MAX_DIST = 160;
+      const COUNT    = 55;
+      let nodes = [], packets = [], W, H;
+
+      function resize() {
+        W = canvas.width  = canvas.offsetWidth;
+        H = canvas.height = canvas.offsetHeight;
+      }
+
+      function mkNode() {
+        return {
+          x:  Math.random() * W,
+          y:  Math.random() * H,
+          vx: (Math.random() - 0.5) * 0.35,
+          vy: (Math.random() - 0.5) * 0.35,
+          r:  Math.random() * 1.5 + 1.2,
+          ph: Math.random() * Math.PI * 2,
+        };
+      }
+
+      function init() {
+        resize();
+        nodes = Array.from({ length: COUNT }, mkNode);
+      }
+
+      function spawnPacket(a, b) {
+        packets.push({
+          x0: a.x, y0: a.y, x1: b.x, y1: b.y,
+          t: 0, spd: 0.012 + Math.random() * 0.01,
+          // occasionally spawn red (viral) or purple (mutation) packets
+          color: Math.random() < 0.12 ? '255,34,64' : Math.random() < 0.18 ? '191,0,255' : '0,255,65',
+        });
+      }
+
+      function update() {
+        for (const n of nodes) {
+          n.x  += n.vx;
+          n.y  += n.vy;
+          n.ph += 0.018;
+          if (n.x < 0 || n.x > W) n.vx *= -1;
+          if (n.y < 0 || n.y > H) n.vy *= -1;
+        }
+
+        // randomly fire a packet along a nearby edge
+        if (Math.random() < 0.06) {
+          const a = nodes[Math.floor(Math.random() * nodes.length)];
+          const near = nodes.filter(b => {
+            if (b === a) return false;
+            const dx = a.x - b.x, dy = a.y - b.y;
+            return dx*dx + dy*dy < MAX_DIST * MAX_DIST;
+          });
+          if (near.length) spawnPacket(a, near[Math.floor(Math.random() * near.length)]);
+        }
+
+        packets = packets.filter(p => (p.t += p.spd) < 1);
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, W, H);
+
+        // edges
+        for (let i = 0; i < nodes.length; i++) {
+          for (let j = i + 1; j < nodes.length; j++) {
+            const a = nodes[i], b = nodes[j];
+            const dx = a.x - b.x, dy = a.y - b.y;
+            const d  = Math.sqrt(dx*dx + dy*dy);
+            if (d < MAX_DIST) {
+              ctx.beginPath();
+              ctx.moveTo(a.x, a.y);
+              ctx.lineTo(b.x, b.y);
+              ctx.strokeStyle = `rgba(0,255,65,${(1 - d / MAX_DIST) * 0.13})`;
+              ctx.lineWidth = 0.7;
+              ctx.stroke();
+            }
+          }
+        }
+
+        // packets
+        for (const p of packets) {
+          const x = p.x0 + (p.x1 - p.x0) * p.t;
+          const y = p.y0 + (p.y1 - p.y0) * p.t;
+          const a = Math.sin(p.t * Math.PI);
+          ctx.beginPath();
+          ctx.arc(x, y, 2.8, 0, Math.PI * 2);
+          ctx.fillStyle   = `rgba(${p.color},${a * 0.95})`;
+          ctx.shadowBlur  = 10;
+          ctx.shadowColor = `rgba(${p.color},0.8)`;
+          ctx.fill();
+          ctx.shadowBlur  = 0;
+        }
+
+        // nodes
+        for (const n of nodes) {
+          const glow = 0.5 + 0.5 * Math.sin(n.ph);
+          ctx.beginPath();
+          ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+          ctx.fillStyle   = `rgba(0,255,65,${0.35 + glow * 0.45})`;
+          ctx.shadowBlur  = 4 + glow * 7;
+          ctx.shadowColor = 'rgba(0,255,65,0.7)';
+          ctx.fill();
+          ctx.shadowBlur  = 0;
+        }
+      }
+
+      function loop() { update(); draw(); requestAnimationFrame(loop); }
+
+      init();
+      loop();
+      window.addEventListener('resize', () => {
+        resize();
+        // redistribute nodes that ended up out of bounds after resize
+        for (const n of nodes) {
+          n.x = Math.min(n.x, W);
+          n.y = Math.min(n.y, H);
+        }
+      });
+    })();
+
     // ── Typewriter ────────────────────────────────
     const phrases = ['Capture. Mutate. Survive.', 'Hunt. Harvest. Weaponize.', 'Feed the living gun.'];
     let pi = 0, ci = 0, deleting = false;
