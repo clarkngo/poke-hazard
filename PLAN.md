@@ -238,11 +238,11 @@ Exceeding the cap: max HP reduced, random debuffs. Forces focused builds.
 
 ## Development Phases
 
-### 🔄 Phase 1 — Foundation
-- [ ] Vite + TypeScript + Phaser 3 scaffold
-- [ ] Save/Load system (localStorage + JSON export/import)
-- [ ] GitHub Pages deploy config (`base: '/poke-hazard/'`)
-- [ ] Title screen + new game / load game flow
+### ✅ Phase 1 — Foundation
+- [x] Vite + TypeScript + Phaser 3 scaffold
+- [x] Save/Load system (localStorage + JSON export/import)
+- [x] GitHub Pages deploy config (`base: '/poke-hazard/'`)
+- [x] Title screen + new game / load game flow
 - [x] `docs/` folder structure + phase selector landing page (`docs/index.html`)
 
 ### 🔲 Phase 2 — Data Layer
