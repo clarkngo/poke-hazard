@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PokéHazard — Capture. Mutate. Survive.</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --green:       #00ff41;
+      --red:         #ff2240;
+      --purple:      #bf00ff;
+      --cyan:        #00f5ff;
+      --bg:          #030806;
+      --bg-card:     #080f09;
+      --bg-card-h:   #0d1c0f;
+      --border:      rgba(0,255,65,0.12);
+      --border-h:    rgba(0,255,65,0.45);
+      --text:        #7aac83;
+      --text-bright: #ccefd4;
+      --text-dim:    #3d5e43;
+    }
+
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* scanlines */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 3px,
+        rgba(0,0,0,0.04) 3px,
+        rgba(0,0,0,0.04) 4px
+      );
+      pointer-events: none;
+      z-index: 9000;
+    }
+
+    /* ─── NAV ─────────────────────────────────────── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 2.5rem;
+      background: rgba(3,8,6,0.88);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+      transition: border-color 0.3s;
+    }
+
+    .nav-logo {
+      font-family: 'Orbitron', monospace;
+      font-weight: 900;
+      font-size: 1.1rem;
+      color: var(--green);
+      text-decoration: none;
+      letter-spacing: 0.08em;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .nav-logo .sym { font-size: 1.3rem; animation: glow-pulse 2.4s ease-in-out infinite; }
+
+    .nav-links { display: flex; gap: 2.2rem; list-style: none; }
+    .nav-links a {
+      color: var(--text-dim);
+      text-decoration: none;
+      font-family: 'Orbitron', monospace;
+      font-size: 0.68rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--green); }
+
+    .nav-btn {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.68rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      text-decoration: none;
+      padding: 0.5rem 1.4rem;
+      border: 1px solid var(--green);
+      color: var(--green);
+      background: transparent;
+      transition: all 0.2s;
+    }
+    .nav-btn:hover { background: var(--green); color: var(--bg); }
+    .nav-btn.off { opacity: 0.28; pointer-events: none; cursor: not-allowed; }
+
+    /* ─── HERO ────────────────────────────────────── */
+    #hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      padding: 7rem 2rem 5rem;
+    }
+
+    .h-bg {
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 50% 50%, rgba(0,255,65,0.045) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 40% at 85% 15%, rgba(191,0,255,0.025) 0%, transparent 60%);
+    }
+
+    .h-grid {
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(0,255,65,0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,255,65,0.035) 1px, transparent 1px);
+      background-size: 56px 56px;
+      mask-image: radial-gradient(ellipse at center, black 25%, transparent 75%);
+    }
+
+    .h-sym {
+      position: absolute;
+      font-size: 42vw;
+      opacity: 0.018;
+      color: var(--green);
+      animation: slow-spin 80s linear infinite;
+      user-select: none;
+      line-height: 1;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .hero-content {
+      position: relative;
+      text-align: center;
+      max-width: 860px;
+    }
+
+    .hero-eyebrow {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.62rem;
+      letter-spacing: 0.45em;
+      text-transform: uppercase;
+      color: var(--green);
+      opacity: 0.65;
+      margin-bottom: 2.2rem;
+    }
+
+    .hero-title {
+      font-family: 'Press Start 2P', monospace;
+      font-size: clamp(2.4rem, 7.5vw, 5.2rem);
+      line-height: 1.25;
+      margin-bottom: 1.8rem;
+      color: #fff;
+    }
+
+    .hero-title .t-poke   { color: var(--red); }
+    .hero-title .t-hazard {
+      color: var(--green);
+      display: inline-block;
+      position: relative;
+    }
+    .hero-title .t-hazard::before {
+      content: 'HAZARD';
+      position: absolute; top: 0; left: 0;
+      color: var(--red);
+      animation: glitch-a 5s infinite;
+      clip-path: polygon(0 18%, 100% 18%, 100% 38%, 0 38%);
+    }
+    .hero-title .t-hazard::after {
+      content: 'HAZARD';
+      position: absolute; top: 0; left: 0;
+      color: var(--cyan);
+      animation: glitch-b 5s infinite;
+      clip-path: polygon(0 58%, 100% 58%, 100% 76%, 0 76%);
+    }
+
+    .hero-tag {
+      font-family: 'Orbitron', monospace;
+      font-size: clamp(0.8rem, 1.8vw, 1.25rem);
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: var(--text-bright);
+      margin-bottom: 1.6rem;
+      min-height: 2rem;
+    }
+
+    .hero-desc {
+      font-size: 1.1rem;
+      color: var(--text);
+      max-width: 560px;
+      margin: 0 auto 3rem;
+      line-height: 1.85;
+      font-weight: 400;
+    }
+
+    .hero-btns {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn-a {
+      display: inline-block;
+      text-decoration: none;
+      background: var(--green);
+      color: var(--bg);
+      padding: 0.9rem 2.6rem;
+      font-family: 'Orbitron', monospace;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      transition: all 0.2s;
+      clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+    }
+    .btn-a:hover { box-shadow: 0 0 32px rgba(0,255,65,0.45); }
+    .btn-a.off   { opacity: 0.28; pointer-events: none; cursor: not-allowed; }
+
+    .btn-b {
+      display: inline-block;
+      text-decoration: none;
+      background: transparent;
+      color: var(--text-bright);
+      padding: 0.9rem 2.6rem;
+      border: 1px solid var(--border);
+      font-family: 'Orbitron', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      transition: all 0.2s;
+    }
+    .btn-b:hover { border-color: var(--green); color: var(--green); }
+
+    .h-scroll {
+      position: absolute;
+      bottom: 2rem; left: 50%;
+      transform: translateX(-50%);
+      display: flex; flex-direction: column; align-items: center; gap: 0.4rem;
+      color: var(--text-dim);
+      font-family: 'Orbitron', monospace;
+      font-size: 0.55rem;
+      letter-spacing: 0.25em;
+      animation: bounce 2.2s ease-in-out infinite;
+    }
+    .h-scroll::after { content: '▼'; font-size: 0.75rem; }
+
+    /* ─── SHARED SECTION CHROME ───────────────────── */
+    .sec {
+      padding: 6rem 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .sec-full {
+      padding: 6rem 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      background: rgba(0,255,65,0.008);
+    }
+    .sec-full .inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 2rem;
+    }
+
+    .label {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.6rem;
+      letter-spacing: 0.45em;
+      text-transform: uppercase;
+      color: var(--green);
+      opacity: 0.65;
+      margin-bottom: 0.7rem;
+    }
+
+    h2.stitle {
+      font-family: 'Orbitron', monospace;
+      font-size: clamp(1.7rem, 3.5vw, 2.6rem);
+      font-weight: 900;
+      color: var(--text-bright);
+      line-height: 1.2;
+      margin-bottom: 0.9rem;
+    }
+
+    p.ssub {
+      font-size: 1.05rem;
+      color: var(--text);
+      max-width: 580px;
+      line-height: 1.85;
+      margin-bottom: 3rem;
+    }
+
+    /* ─── FEATURE CARDS ───────────────────────────── */
+    .feat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.4rem;
+    }
+
+    .feat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      padding: 2rem 1.8rem;
+      position: relative;
+      transition: all 0.3s;
+      overflow: hidden;
+    }
+    .feat-card::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--ca, var(--green)), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .feat-card:hover {
+      border-color: rgba(0,255,65,0.38);
+      background: var(--bg-card-h);
+      transform: translateY(-5px);
+      box-shadow: 0 12px 40px rgba(0,255,65,0.07);
+    }
+    .feat-card:hover::after { opacity: 1; }
+
+    .feat-card.cr { --ca: var(--red); }
+    .feat-card.cp { --ca: var(--purple); }
+    .feat-card.cc { --ca: var(--cyan); }
+    .feat-card.cr:hover { border-color: rgba(255,34,64,0.38); box-shadow: 0 12px 40px rgba(255,34,64,0.07); }
+    .feat-card.cp:hover { border-color: rgba(191,0,255,0.38); box-shadow: 0 12px 40px rgba(191,0,255,0.07); }
+    .feat-card.cc:hover { border-color: rgba(0,245,255,0.38); box-shadow: 0 12px 40px rgba(0,245,255,0.07); }
+
+    .feat-phase {
+      position: absolute; top: 1.1rem; right: 1.1rem;
+      font-family: 'Orbitron', monospace; font-size: 0.52rem;
+      letter-spacing: 0.08em;
+      padding: 0.2rem 0.55rem;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+    }
+    .feat-icon  { font-size: 2.4rem; margin-bottom: 1rem; display: block; }
+    .feat-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.85rem; font-weight: 700;
+      color: var(--text-bright);
+      margin-bottom: 0.7rem;
+      letter-spacing: 0.04em;
+    }
+    .feat-desc  { font-size: 0.95rem; color: var(--text); line-height: 1.72; font-weight: 400; }
+
+    /* ─── SYSTEMS ─────────────────────────────────── */
+    .sys-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2rem;
+      margin-top: 3rem;
+    }
+
+    .sys-card {
+      border: 1px solid var(--border);
+      background: var(--bg);
+      padding: 2rem;
+      position: relative;
+    }
+    .sys-num {
+      font-family: 'Orbitron', monospace; font-size: 3.5rem; font-weight: 900;
+      color: var(--green); opacity: 0.07;
+      position: absolute; top: 0.8rem; right: 1.2rem;
+      line-height: 1;
+    }
+    .sys-title {
+      font-family: 'Orbitron', monospace; font-size: 0.9rem; font-weight: 700;
+      color: var(--green); margin-bottom: 0.9rem;
+    }
+    .sys-desc { font-size: 0.93rem; color: var(--text); line-height: 1.8; margin-bottom: 1.5rem; font-weight: 400; }
+
+    .loop {
+      display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center;
+    }
+    .l-step {
+      font-family: 'Orbitron', monospace; font-size: 0.5rem;
+      padding: 0.3rem 0.6rem;
+      border: 1px solid var(--border);
+      color: var(--text-dim); letter-spacing: 0.04em;
+    }
+    .l-step.on { border-color: var(--green); color: var(--green); }
+    .l-arr { font-size: 0.65rem; color: var(--text-dim); }
+
+    .slots { display: flex; gap: 0.45rem; margin-top: 1rem; flex-wrap: wrap; }
+    .slot {
+      width: 42px; height: 42px;
+      border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Orbitron', monospace; font-size: 0.65rem;
+      color: var(--text-dim);
+    }
+    .slot.sg { border-color: var(--green);   background: rgba(0,255,65,0.1);   color: var(--green); }
+    .slot.sr { border-color: var(--red);     background: rgba(255,34,64,0.1);  color: var(--red); }
+    .slot.sp { border-color: var(--purple);  background: rgba(191,0,255,0.1);  color: var(--purple); }
+    .slot.sc { border-color: var(--cyan);    background: rgba(0,245,255,0.1);  color: var(--cyan); }
+    .slot.lk { opacity: 0.18; }
+
+    .slot-note {
+      font-family: 'Orbitron', monospace; font-size: 0.6rem;
+      letter-spacing: 0.04em; margin-top: 0.6rem;
+    }
+    .slot-note.good { color: var(--green); }
+    .slot-note.muted { color: var(--text-dim); }
+
+    .vbar { margin-top: 1rem; }
+    .vbar-head {
+      display: flex; justify-content: space-between;
+      font-family: 'Orbitron', monospace; font-size: 0.58rem;
+      color: var(--text-dim); margin-bottom: 0.4rem;
+    }
+    .vbar-track {
+      height: 9px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      position: relative; overflow: hidden;
+    }
+    .vbar-fill {
+      height: 100%;
+      width: 72%;
+      background: linear-gradient(90deg, var(--green), #aaff00 70%, var(--red));
+    }
+    .vbar-cap {
+      position: absolute; top: -3px; left: 80%;
+      width: 2px; height: calc(100% + 6px);
+      background: var(--red);
+    }
+    .vfx { margin-top: 0.9rem; display: flex; flex-direction: column; gap: 0.35rem; }
+    .vfx-row { font-size: 0.82rem; color: var(--text-dim); display: flex; align-items: center; gap: 0.5rem; }
+    .vfx-row.bad { color: rgba(255,34,64,0.75); }
+    .vdot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-dim); flex-shrink: 0; }
+    .vdot.bad { background: var(--red); }
+
+    /* ─── TABLE ───────────────────────────────────── */
+    .tbl-wrap { overflow-x: auto; border: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; font-family: 'Rajdhani', sans-serif; }
+    th {
+      font-family: 'Orbitron', monospace; font-size: 0.62rem;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--green); padding: 1rem 1.5rem; text-align: left;
+      background: rgba(0,255,65,0.03); border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid rgba(0,255,65,0.05);
+      font-size: 1rem; color: var(--text); vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(0,255,65,0.02); }
+    .ab { display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600; color: var(--text-bright); }
+    .ai { font-size: 1.15rem; }
+    .strain {
+      font-family: 'Orbitron', monospace; font-size: 0.7rem; font-weight: 700;
+      padding: 0.2rem 0.6rem; border: 1px solid;
+    }
+    .s-a { color: var(--green);  border-color: rgba(0,255,65,0.4);  background: rgba(0,255,65,0.06); }
+    .s-b { color: var(--red);    border-color: rgba(255,34,64,0.4); background: rgba(255,34,64,0.06); }
+    .s-g { color: #aaff00;       border-color: rgba(170,255,0,0.4); background: rgba(170,255,0,0.06); }
+    .s-d { color: var(--cyan);   border-color: rgba(0,245,255,0.4); background: rgba(0,245,255,0.06); }
+    .s-o { color: var(--purple); border-color: rgba(191,0,255,0.4); background: rgba(191,0,255,0.06); }
+
+    /* ─── ROADMAP ─────────────────────────────────── */
+    .phases {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.1rem;
+      margin-top: 3rem;
+    }
+
+    .ph-card {
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      padding: 1.6rem 1.4rem;
+      position: relative;
+      transition: border-color 0.3s;
+      display: flex; flex-direction: column;
+    }
+    .ph-card:hover { border-color: rgba(0,255,65,0.28); }
+    .ph-card.cur {
+      border-color: rgba(0,255,65,0.45);
+      box-shadow: 0 0 24px rgba(0,255,65,0.05);
+    }
+    .ph-card.done { border-color: rgba(0,255,65,0.6); }
+
+    .ph-num {
+      font-family: 'Press Start 2P', monospace; font-size: 0.58rem;
+      color: var(--text-dim); margin-bottom: 0.6rem;
+    }
+    .ph-title {
+      font-family: 'Orbitron', monospace; font-size: 0.82rem; font-weight: 700;
+      color: var(--text-bright); margin-bottom: 1rem; line-height: 1.4;
+    }
+    .ph-list { list-style: none; display: flex; flex-direction: column; gap: 0.4rem; flex: 1; margin-bottom: 1.4rem; }
+    .ph-list li { font-size: 0.85rem; color: var(--text); display: flex; align-items: flex-start; gap: 0.45rem; }
+    .ph-list li::before { content: '›'; color: var(--green); flex-shrink: 0; }
+
+    .ph-badge {
+      font-family: 'Orbitron', monospace; font-size: 0.55rem;
+      letter-spacing: 0.1em; padding: 0.28rem 0.7rem;
+      display: inline-block; align-self: flex-start;
+    }
+    .ph-badge.plan { border: 1px solid var(--border); color: var(--text-dim); }
+    .ph-badge.now  { border: 1px solid var(--green);  color: var(--green); animation: pulse-brd 2s ease-in-out infinite; }
+    .ph-badge.done { border: 1px solid var(--green);  background: var(--green); color: var(--bg); font-weight: 700; }
+
+    .ph-play {
+      display: block; margin-top: 0.6rem; text-align: center;
+      padding: 0.45rem;
+      background: var(--green); color: var(--bg);
+      font-family: 'Orbitron', monospace; font-size: 0.6rem;
+      letter-spacing: 0.08em; font-weight: 700;
+      text-decoration: none; transition: background 0.2s;
+    }
+    .ph-play:hover { background: #00cc35; }
+
+    /* ─── FOOTER ──────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 3.5rem 2rem;
+      text-align: center;
+    }
+    .ft-logo {
+      font-family: 'Orbitron', monospace; font-size: 1rem;
+      color: var(--green); opacity: 0.45; margin-bottom: 1rem;
+    }
+    .ft-txt { font-size: 0.88rem; color: var(--text-dim); line-height: 1.9; }
+    .ft-txt a { color: var(--text); text-decoration: none; transition: color 0.2s; }
+    .ft-txt a:hover { color: var(--green); }
+
+    /* ─── ANIMATIONS ──────────────────────────────── */
+    @keyframes slow-spin   { to { transform: translate(-50%,-50%) rotate(360deg); } }
+    @keyframes glow-pulse  {
+      0%,100% { text-shadow: 0 0 8px rgba(0,255,65,0.3); }
+      50%      { text-shadow: 0 0 24px rgba(0,255,65,0.9); }
+    }
+    @keyframes glitch-a {
+      0%,93%,100% { transform:translate(0);        opacity:0; }
+      94%          { transform:translate(-3px,1px); opacity:0.75; }
+      96%          { transform:translate(3px,-1px); opacity:0.55; }
+      98%          { transform:translate(-2px,2px); opacity:0.7; }
+    }
+    @keyframes glitch-b {
+      0%,90%,100% { transform:translate(0);        opacity:0; }
+      91%          { transform:translate(3px,-1px); opacity:0.65; }
+      93%          { transform:translate(-3px,1px); opacity:0.5; }
+    }
+    @keyframes bounce {
+      0%,100% { transform:translateX(-50%) translateY(0); }
+      50%      { transform:translateX(-50%) translateY(8px); }
+    }
+    @keyframes pulse-brd {
+      0%,100% { box-shadow: 0 0 0 0   rgba(0,255,65,0.3); }
+      50%      { box-shadow: 0 0 0 4px rgba(0,255,65,0); }
+    }
+
+    /* ─── SCROLL REVEAL ───────────────────────────── */
+    .rv {
+      opacity: 0; transform: translateY(28px);
+      transition: opacity 0.65s ease, transform 0.65s ease;
+    }
+    .rv.vis { opacity: 1; transform: translateY(0); }
+    .d1 { transition-delay: 0.1s; }
+    .d2 { transition-delay: 0.2s; }
+    .d3 { transition-delay: 0.3s; }
+    .d4 { transition-delay: 0.4s; }
+    .d5 { transition-delay: 0.5s; }
+    .d6 { transition-delay: 0.6s; }
+
+    /* ─── RESPONSIVE ──────────────────────────────── */
+    @media (max-width: 960px) {
+      .feat-grid  { grid-template-columns: repeat(2,1fr); }
+      .sys-grid   { grid-template-columns: 1fr; }
+      .phases     { grid-template-columns: repeat(2,1fr); }
+      .nav-links  { display: none; }
+    }
+    @media (max-width: 580px) {
+      .feat-grid  { grid-template-columns: 1fr; }
+      .phases     { grid-template-columns: 1fr; }
+      .hero-title { font-size: 2rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ░░ NAV ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ -->
+  <nav id="nav">
+    <a href="#" class="nav-logo">
+      <span class="sym">☣</span>POKÉHAZARD
+    </a>
+    <ul class="nav-links">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#systems">Systems</a></li>
+      <li><a href="#gear">Gear</a></li>
+      <li><a href="#roadmap">Roadmap</a></li>
+    </ul>
+    <a href="#roadmap" class="nav-btn off">▶ Play Latest</a>
+  </nav>
+
+  <!-- ░░ HERO ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ -->
+  <section id="hero">
+    <div class="h-bg"></div>
+    <div class="h-grid"></div>
+    <div class="h-sym">☣</div>
+    <div class="hero-content">
+      <p class="hero-eyebrow">// VIRAL INCIDENT REPORT — PROJECT P.H. //</p>
+      <h1 class="hero-title">
+        <span class="t-poke">POKÉ</span><span class="t-hazard">HAZARD</span>
+      </h1>
+      <p class="hero-tag" id="typewriter">&nbsp;</p>
+      <p class="hero-desc">
+        A survival horror monster-collecting RPG. Hunt the infected, extract their genetic code,
+        and build living weapons from their biology. The virus spreads. So do you.
+      </p>
+      <div class="hero-btns">
+        <a href="#roadmap" class="btn-a off">▶ Play Latest Build</a>
+        <a href="https://github.com/clarkngo/poke-hazard" class="btn-b" target="_blank" rel="noopener">View on GitHub</a>
+      </div>
+    </div>
+    <div class="h-scroll">SCROLL</div>
+  </section>
+
+  <!-- ░░ FEATURES ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ -->
+  <section id="features" class="sec">
+    <p class="label">// SPECIMEN CLASSIFICATIONS //</p>
+    <h2 class="stitle">Core Features</h2>
+    <p class="ssub">Every system is built around one loop: hunt the infected, harvest their biology, and weaponize what you find.</p>
+    <div class="feat-grid">
+
+      <div class="feat-card rv">
+        <span class="feat-phase">PHASE 2</span>
+        <span class="feat-icon">🧬</span>
+        <h3 class="feat-title">Viral Dex</h3>
+        <p class="feat-desc">Track every infected creature from first sighting to full capture. Three tiers — Spotted, Encountered, Captured — each unlocking more data and crafting options.</p>
+      </div>
+
+      <div class="feat-card cr rv d1">
+        <span class="feat-phase">PHASE 5</span>
+        <span class="feat-icon">⚗️</span>
+        <h3 class="feat-title">T-Evolution</h3>
+        <p class="feat-desc">Monsters mutate through a three-stage T-Evolution chain triggered by level, viral exposure, or held items. Each stage unlocks new genetic codes and craftable abilities.</p>
+      </div>
+
+      <div class="feat-card cp rv d2">
+        <span class="feat-phase">PHASE 5</span>
+        <span class="feat-icon">🔬</span>
+        <h3 class="feat-title">Mutation Monsters</h3>
+        <p class="feat-desc">Combine two captured monsters in the Mutation Chamber. Offspring inherit the dominant viral strain and mixed stats. Conflicting strains may produce rare Chimeras.</p>
+      </div>
+
+      <div class="feat-card cc rv d3">
+        <span class="feat-phase">PHASE 4</span>
+        <span class="feat-icon">⚡</span>
+        <h3 class="feat-title">Viral Core Extraction</h3>
+        <p class="feat-desc">Defeat named monsters to extract their Unique Genetic Code. Slot one core per weapon for a Mega Man-style active ability — Licker's Grapple, Hunter's Claw, or Tyrant's Rage.</p>
+      </div>
+
+      <div class="feat-card rv d1">
+        <span class="feat-phase">PHASE 4</span>
+        <span class="feat-icon">🔩</span>
+        <h3 class="feat-title">Bio-Containerization</h3>
+        <p class="feat-desc">Weapons have 1–4 Bio-Pod slots unlocked by XP. Slot compressed monsters for elemental rounds and scopes, or stack three of the same Viral Strain to trigger a weapon evolution.</p>
+      </div>
+
+      <div class="feat-card cr rv d2">
+        <span class="feat-phase">PHASE 4</span>
+        <span class="feat-icon">🫀</span>
+        <h3 class="feat-title">Living Weapons</h3>
+        <p class="feat-desc">Your weapons are biological entities. Feed them Bio-Pods to stay powerful. Starve them and they go Dormant. Watch your gun grow eyes, pulse with veins, and sprout twitching limbs.</p>
+      </div>
+
+      <div class="feat-card cp rv d3">
+        <span class="feat-phase">PHASE 6</span>
+        <span class="feat-icon">🛡️</span>
+        <h3 class="feat-title">Bio-Armor</h3>
+        <p class="feat-desc">Harvest monster biology for reactive armor. Carapace Plating blocks and breaks. Regenerative Weave slowly heals. Reactive Spikes counter-attack anything that grabs you.</p>
+      </div>
+
+      <div class="feat-card cc rv d1">
+        <span class="feat-phase">PHASE 6</span>
+        <span class="feat-icon">👁️</span>
+        <h3 class="feat-title">Sentient Accessories</h3>
+        <p class="feat-desc">Living hardware with passive effects. The Watcher Lens highlights weak points. Adrenaline Glands trigger speed bursts near death. Pheromone Diffusers mask you from low-tier zombies.</p>
+      </div>
+
+      <div class="feat-card rv d2">
+        <span class="feat-phase">PHASE 6</span>
+        <span class="feat-icon">☣️</span>
+        <h3 class="feat-title">Viral Load</h3>
+        <p class="feat-desc">Every piece of bio-gear adds Viral Load to your body. Exceed the cap and mutation begins — reduced max HP, random debuffs. More power always comes at a cost.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ░░ SYSTEMS ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ -->
+  <div id="systems" class="sec-full">
+    <div class="inner">
+      <p class="label">// SYSTEM SCHEMATICS //</p>
+      <h2 class="stitle">How It Works</h2>
+      <p class="ssub">Three interlocking systems that form the core gameplay loop.</p>
+      <div class="sys-grid">
+
+        <div class="sys-card rv">
+          <span class="sys-num">01</span>
+          <h3 class="sys-title">The Living Weapon Loop</h3>
+          <p class="sys-desc">Weapons are alive and hungry. Hunt monsters, compress them into Bio-Pods, and feed your weapon to keep its abilities active. Starvation sends it Dormant until you hunt again.</p>
+          <div class="loop">
+            <span class="l-step on">HUNT</span>
+            <span class="l-arr">›</span>
+            <span class="l-step on">CAPTURE</span>
+            <span class="l-arr">›</span>
+            <span class="l-step on">COMPRESS</span>
+            <span class="l-arr">›</span>
+            <span class="l-step on">FEED</span>
+            <span class="l-arr">›</span>
+            <span class="l-step on">POWER</span>
+            <span class="l-arr">›</span>
+            <span class="l-step">DORMANT</span>
+            <span class="l-arr" style="color:var(--green)">↺</span>
+          </div>
+        </div>
+
+        <div class="sys-card rv d2">
+          <span class="sys-num">02</span>
+          <h3 class="sys-title">Bio-Pod Synergies</h3>
+          <p class="sys-desc">Socket compressed monsters into weapon slots. Mix viral strains for varied effects, or stack three matching strains to trigger a full weapon evolution.</p>
+          <div class="slots">
+            <div class="slot sg">α</div>
+            <div class="slot sg">α</div>
+            <div class="slot sg">α</div>
+            <div class="slot lk">—</div>
+          </div>
+          <p class="slot-note good">▲ TRIPLE ALPHA — WEAPON EVOLVED</p>
+          <div class="slots" style="margin-top:1rem">
+            <div class="slot sr">β</div>
+            <div class="slot sp">δ</div>
+            <div class="slot sc">δ</div>
+            <div class="slot lk">—</div>
+          </div>
+          <p class="slot-note muted">▲ MIXED STRAINS — VARIED EFFECTS</p>
+        </div>
+
+        <div class="sys-card rv d4">
+          <span class="sys-num">03</span>
+          <h3 class="sys-title">Viral Load Balance</h3>
+          <p class="sys-desc">Every weapon, armor piece, and accessory contributes Viral Load. Exceeding the cap triggers cascading mutations, forcing focused, deliberate builds.</p>
+          <div class="vbar">
+            <div class="vbar-head"><span>VIRAL LOAD</span><span>72 / 80</span></div>
+            <div class="vbar-track">
+              <div class="vbar-fill"></div>
+              <div class="vbar-cap"></div>
+            </div>
+          </div>
+          <div class="vfx">
+            <div class="vfx-row"><span class="vdot"></span>0–50% — Fully stable</div>
+            <div class="vfx-row"><span class="vdot"></span>50–80% — Minor stat drain</div>
+            <div class="vfx-row bad"><span class="vdot bad"></span>80–100% — Max HP reduced</div>
+            <div class="vfx-row bad"><span class="vdot bad"></span>100%+ — Random debuffs, mutation</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ░░ GEAR TABLE ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ -->
+  <section id="gear" class="sec">
+    <p class="label">// GENETIC YIELD TABLE //</p>
+    <h2 class="stitle">Monster Archetype → Gear</h2>
+    <p class="ssub">Each monster archetype produces distinct weapon and armor upgrades when its genetic code is extracted.</p>
+    <div class="tbl-wrap rv">
+      <table>
+        <thead>
+          <tr>
+            <th>Archetype</th>
+            <th>Weapon Mod</th>
+            <th>Armor / Accessory</th>
+            <th>Viral Strain</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="ab"><span class="ai">💨</span>Sprinter</span></td>
+            <td>Increased fire rate</td>
+            <td>Stamina recovery boost</td>
+            <td><span class="strain s-a">ALPHA</span></td>
+          </tr>
+          <tr>
+            <td><span class="ab"><span class="ai">🪨</span>Tank</span></td>
+            <td>Heavy impact / knockback</td>
+            <td>Blast resistance plates</td>
+            <td><span class="strain s-b">BETA</span></td>
+          </tr>
+          <tr>
+            <td><span class="ab"><span class="ai">🧪</span>Toxic</span></td>
+            <td>Corrosive / poison rounds</td>
+            <td>Gas mask / acid immunity</td>
+            <td><span class="strain s-g">GAMMA</span></td>
+          </tr>
+          <tr>
+            <td><span class="ab"><span class="ai">👻</span>Camouflage</span></td>
+            <td>Silencer / stealth mod</td>
+            <td>Invisibility cloak (short burst)</td>
+            <td><span class="strain s-d">DELTA</span></td>
+          </tr>
+          <tr>
+            <td><span class="ab"><span class="ai">📡</span>Sentinel</span></td>
+            <td>Auto-turret mode</td>
+            <td>360° radar / mini-map reveal</td>
+            <td><span class="strain s-o">OMEGA</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ░░ ROADMAP ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ -->
+  <section id="roadmap" class="sec" style="border-top:1px solid var(--border)">
+    <p class="label">// DEVELOPMENT ROADMAP //</p>
+    <h2 class="stitle">Build Phases</h2>
+    <p class="ssub">Each phase ships as its own playable build, permanently accessible at its own URL so you can see the game evolve.</p>
+    <div class="phases">
+
+      <div class="ph-card cur rv">
+        <p class="ph-num">PHASE 01</p>
+        <h3 class="ph-title">Foundation</h3>
+        <ul class="ph-list">
+          <li>Vite + TypeScript + Phaser 3</li>
+          <li>Save / Load (localStorage + JSON)</li>
+          <li>GitHub Pages deploy config</li>
+          <li>Title screen · New / Load game</li>
+          <li>Phase selector landing page</li>
+        </ul>
+        <span class="ph-badge now">● IN PROGRESS</span>
+      </div>
+
+      <div class="ph-card rv d1">
+        <p class="ph-num">PHASE 02</p>
+        <h3 class="ph-title">Data Layer</h3>
+        <ul class="ph-list">
+          <li>20+ monster definitions</li>
+          <li>T-Evolution chains</li>
+          <li>Weapon / armor definitions</li>
+          <li>Static Viral Dex UI panel</li>
+        </ul>
+        <span class="ph-badge plan">○ PLANNED</span>
+      </div>
+
+      <div class="ph-card rv d2">
+        <p class="ph-num">PHASE 03</p>
+        <h3 class="ph-title">Battle System</h3>
+        <ul class="ph-list">
+          <li>Turn-based battle scene</li>
+          <li>Bio-Pod capture mechanic</li>
+          <li>Genetic code extraction</li>
+          <li>XP and leveling</li>
+        </ul>
+        <span class="ph-badge plan">○ PLANNED</span>
+      </div>
+
+      <div class="ph-card rv d3">
+        <p class="ph-num">PHASE 04</p>
+        <h3 class="ph-title">Weapon System</h3>
+        <ul class="ph-list">
+          <li>Bio-Pod slot UI</li>
+          <li>Viral Core extraction + equip</li>
+          <li>Living weapon hunger mechanic</li>
+          <li>Weapon evolution + mutations</li>
+        </ul>
+        <span class="ph-badge plan">○ PLANNED</span>
+      </div>
+
+      <div class="ph-card rv">
+        <p class="ph-num">PHASE 05</p>
+        <h3 class="ph-title">Evolution & Breeding</h3>
+        <ul class="ph-list">
+          <li>T-Evolution triggers + cutscene</li>
+          <li>Mutation Chamber UI</li>
+          <li>Chimera / conflict outcomes</li>
+        </ul>
+        <span class="ph-badge plan">○ PLANNED</span>
+      </div>
+
+      <div class="ph-card rv d1">
+        <p class="ph-num">PHASE 06</p>
+        <h3 class="ph-title">Armor & Accessories</h3>
+        <ul class="ph-list">
+          <li>Bio-Armor equip system</li>
+          <li>Sentient accessory effects</li>
+          <li>Viral Load meter + debuff triggers</li>
+        </ul>
+        <span class="ph-badge plan">○ PLANNED</span>
+      </div>
+
+      <div class="ph-card rv d2">
+        <p class="ph-num">PHASE 07</p>
+        <h3 class="ph-title">Overworld</h3>
+        <ul class="ph-list">
+          <li>Tilemap navigation</li>
+          <li>Encounter zones (random + visible)</li>
+          <li>Map transitions</li>
+        </ul>
+        <span class="ph-badge plan">○ PLANNED</span>
+      </div>
+
+      <div class="ph-card rv d3">
+        <p class="ph-num">PHASE 08</p>
+        <h3 class="ph-title">Polish</h3>
+        <ul class="ph-list">
+          <li>Audio (battle BGM, SFX)</li>
+          <li>Sprite animations</li>
+          <li>UI polish + balance tuning</li>
+        </ul>
+        <span class="ph-badge plan">○ PLANNED</span>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ░░ FOOTER ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ -->
+  <footer>
+    <div class="ft-logo">☣ POKÉHAZARD</div>
+    <div class="ft-txt">
+      <p>Deployed on GitHub Pages · Save data stored locally in your browser · Export / import saves as JSON</p>
+      <p style="margin-top:0.5rem">
+        <a href="https://github.com/clarkngo/poke-hazard" target="_blank" rel="noopener">
+          github.com/clarkngo/poke-hazard
+        </a>
+      </p>
+    </div>
+  </footer>
+
+  <script>
+    // ── Typewriter ────────────────────────────────
+    const phrases = ['Capture. Mutate. Survive.', 'Hunt. Harvest. Weaponize.', 'Feed the living gun.'];
+    let pi = 0, ci = 0, deleting = false;
+    const tw = document.getElementById('typewriter');
+    function tick() {
+      const phrase = phrases[pi];
+      if (!deleting) {
+        tw.textContent = phrase.slice(0, ++ci);
+        if (ci === phrase.length) { deleting = true; return setTimeout(tick, 2200); }
+      } else {
+        tw.textContent = phrase.slice(0, --ci);
+        if (ci === 0) { deleting = false; pi = (pi + 1) % phrases.length; return setTimeout(tick, 400); }
+      }
+      setTimeout(tick, deleting ? 45 : 80);
+    }
+    setTimeout(tick, 900);
+
+    // ── Scroll reveal ─────────────────────────────
+    const obs = new IntersectionObserver(
+      entries => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('vis'); }),
+      { threshold: 0.08 }
+    );
+    document.querySelectorAll('.rv').forEach(el => obs.observe(el));
+
+    // ── Nav scroll tint ───────────────────────────
+    const nav = document.getElementById('nav');
+    window.addEventListener('scroll', () => {
+      nav.style.borderBottomColor = window.scrollY > 60
+        ? 'rgba(0,255,65,0.22)'
+        : 'rgba(0,255,65,0.12)';
+    }, { passive: true });
+  </script>
+</body>
+</html>
