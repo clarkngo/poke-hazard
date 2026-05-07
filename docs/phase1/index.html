@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PokéHazard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --green:  #00ff41;
+      --red:    #ff2240;
+      --purple: #bf00ff;
+      --cyan:   #00f5ff;
+      --bg:     #030806;
+      --border: rgba(0,255,65,0.15);
+      --text:   #7aac83;
+      --bright: #ccefd4;
+      --dim:    #3d5e43;
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      font-family: 'Rajdhani', sans-serif;
+    }
+
+    #game-container {
+      position: relative;
+      width: 100%; height: 100%;
+    }
+
+    canvas { display: block; }
+
+    /* ── UI overlay (mounted by scenes) ───────────── */
+    #ui {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 10;
+    }
+    #ui > * { pointer-events: auto; }
+
+    /* ── Title screen ─────────────────────────────── */
+    #title-ui {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      user-select: none;
+    }
+
+    .title-eyebrow {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.6rem;
+      letter-spacing: 0.45em;
+      text-transform: uppercase;
+      color: var(--green);
+      opacity: 0.6;
+      margin-bottom: 1.8rem;
+      text-align: center;
+    }
+
+    .title-main {
+      font-family: 'Press Start 2P', monospace;
+      font-size: clamp(2.2rem, 6vw, 4.8rem);
+      line-height: 1.2;
+      color: #fff;
+      margin-bottom: 0.6rem;
+      text-align: center;
+    }
+    .title-main .tp  { color: var(--red); }
+    .title-main .th  { color: var(--green); display: inline-block; position: relative; }
+    .title-main .th::before {
+      content: 'HAZARD';
+      position: absolute; top: 0; left: 0;
+      color: var(--red);
+      animation: glitch-a 5s infinite;
+      clip-path: polygon(0 18%, 100% 18%, 100% 38%, 0 38%);
+    }
+    .title-main .th::after {
+      content: 'HAZARD';
+      position: absolute; top: 0; left: 0;
+      color: var(--cyan);
+      animation: glitch-b 5s infinite;
+      clip-path: polygon(0 58%, 100% 58%, 100% 78%, 0 78%);
+    }
+
+    .title-version {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.6rem;
+      letter-spacing: 0.2em;
+      color: var(--dim);
+      margin-bottom: 3.5rem;
+    }
+
+    /* ── Menu ─────────────────────────────────────── */
+    .title-menu {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      align-items: center;
+      width: 280px;
+    }
+
+    .menu-btn {
+      width: 100%;
+      padding: 0.85rem 1.5rem;
+      font-family: 'Orbitron', monospace;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      cursor: pointer;
+      border: none;
+      transition: all 0.18s;
+      clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+    }
+
+    .menu-btn.primary {
+      background: var(--green);
+      color: var(--bg);
+    }
+    .menu-btn.primary:hover {
+      background: #00ff41cc;
+      box-shadow: 0 0 28px rgba(0,255,65,0.5);
+    }
+
+    .menu-btn.secondary {
+      background: transparent;
+      color: var(--bright);
+      border: 1px solid var(--border);
+      clip-path: none;
+    }
+    .menu-btn.secondary:hover {
+      border-color: rgba(0,255,65,0.45);
+      color: var(--green);
+      background: rgba(0,255,65,0.04);
+    }
+
+    .menu-btn:disabled {
+      opacity: 0.28;
+      cursor: not-allowed;
+    }
+    .menu-btn:disabled:hover {
+      box-shadow: none;
+      background: var(--green);
+      border-color: var(--border);
+      color: var(--bright);
+    }
+
+    .title-save-info {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.55rem;
+      letter-spacing: 0.1em;
+      color: var(--dim);
+      margin-top: 1.2rem;
+      text-align: center;
+    }
+
+    .title-home-link {
+      position: absolute;
+      top: 1.4rem;
+      left: 1.8rem;
+      font-family: 'Orbitron', monospace;
+      font-size: 0.62rem;
+      letter-spacing: 0.12em;
+      color: var(--dim);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: color 0.2s;
+    }
+    .title-home-link:hover { color: var(--green); }
+
+    /* ── Name entry modal ─────────────────────────── */
+    .modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(3,8,6,0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+
+    .modal-box {
+      border: 1px solid var(--border);
+      background: #080f09;
+      padding: 2.5rem 2rem;
+      width: 360px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .modal-label {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.6rem;
+      letter-spacing: 0.35em;
+      color: var(--green);
+      opacity: 0.7;
+    }
+
+    .modal-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 1rem;
+      font-weight: 900;
+      color: var(--bright);
+    }
+
+    .name-input {
+      width: 100%;
+      background: rgba(0,255,65,0.04);
+      border: 1px solid rgba(0,255,65,0.3);
+      color: var(--green);
+      font-family: 'Orbitron', monospace;
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      padding: 0.75rem 1rem;
+      outline: none;
+      text-transform: uppercase;
+    }
+    .name-input::placeholder { color: var(--dim); font-size: 0.8rem; }
+    .name-input:focus { border-color: var(--green); box-shadow: 0 0 12px rgba(0,255,65,0.15); }
+
+    .modal-btns {
+      display: flex;
+      gap: 0.75rem;
+    }
+    .modal-btns .menu-btn { flex: 1; }
+
+    /* ── Game / placeholder screen ────────────────── */
+    #game-ui {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      padding: 2rem;
+    }
+
+    .game-eyebrow {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.6rem;
+      letter-spacing: 0.4em;
+      color: var(--green);
+      opacity: 0.6;
+      margin-bottom: 1rem;
+    }
+
+    .game-title {
+      font-family: 'Orbitron', monospace;
+      font-size: clamp(1.2rem, 3vw, 2rem);
+      font-weight: 900;
+      color: var(--bright);
+      margin-bottom: 0.5rem;
+      text-align: center;
+    }
+
+    .game-coming-soon {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      color: var(--dim);
+      margin-bottom: 3rem;
+    }
+
+    .save-card {
+      border: 1px solid var(--border);
+      background: rgba(0,255,65,0.02);
+      padding: 1.5rem 2rem;
+      width: 100%;
+      max-width: 420px;
+      margin-bottom: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .save-card-label {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.55rem;
+      letter-spacing: 0.3em;
+      color: var(--dim);
+      text-transform: uppercase;
+    }
+
+    .save-card-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.95rem;
+    }
+
+    .save-card-key {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.65rem;
+      color: var(--dim);
+      letter-spacing: 0.08em;
+    }
+
+    .save-card-val {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.8rem;
+      color: var(--green);
+      font-weight: 700;
+    }
+
+    .game-actions {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      width: 100%;
+      max-width: 420px;
+    }
+    .game-actions .menu-btn { flex: 1; min-width: 120px; }
+
+    /* ── Scanlines ────────────────────────────────── */
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(
+        0deg, transparent, transparent 3px,
+        rgba(0,0,0,0.04) 3px, rgba(0,0,0,0.04) 4px
+      );
+      pointer-events: none;
+      z-index: 9000;
+    }
+
+    /* ── Animations ───────────────────────────────── */
+    @keyframes glitch-a {
+      0%,93%,100% { transform:translate(0);       opacity:0; }
+      94%          { transform:translate(-3px,1px);opacity:.75; }
+      96%          { transform:translate(3px,-1px);opacity:.55; }
+      98%          { transform:translate(-2px,2px);opacity:.7; }
+    }
+    @keyframes glitch-b {
+      0%,90%,100% { transform:translate(0);       opacity:0; }
+      91%          { transform:translate(3px,-1px);opacity:.65; }
+      93%          { transform:translate(-3px,1px);opacity:.5; }
+    }
+    @keyframes fade-in {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in { animation: fade-in 0.5s ease forwards; }
+  </style>
+  <script type="module" crossorigin src="/poke-hazard/assets/index-CQo3w-iw.js"></script>
+</head>
+<body>
+  <div id="game-container">
+    <div id="ui"></div>
+  </div>
+</body>
+</html>

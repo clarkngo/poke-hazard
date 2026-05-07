@@ -7,6 +7,32 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+---
+
+## [0.4.0] — 2026-05-07 — Phase 1: Game Foundation
+
+### Added
+- **Vite + TypeScript + Phaser 3** project scaffold (`src/`, `index.html`, `vite.config.ts`, `tsconfig.json`)
+- **TitleScene** — Phaser scene with live node network animation (60 nodes, proximity edges, glowing packets in green/red/purple), HTML overlay with glitch title, version badge, and full menu
+  - New Game → name entry modal → creates and persists save
+  - Continue → loads existing save (disabled when no save exists)
+  - Import Save → file picker, JSON validation, stamps current version
+  - Export Save → downloads timestamped `.json`
+- **GameScene** — placeholder screen showing survivor biometric status (HP, Viral Load, Chapter, last save time) with Back to Title and Export Save actions
+- **SaveSystem** (`src/game/systems/SaveSystem.ts`) — localStorage persistence, JSON export/import, structural validation, timestamp formatting
+- **Save types** (`src/game/types/save.ts`) — `SaveState` interface, `createDefaultSave()`
+- **GitHub Actions deploy workflow** (`.github/workflows/deploy.yml`) — builds on every push to `main`, copies `dist/` → `docs/latest/` and auto-commits
+- `npm run snapshot:phase1` script — builds and freezes output to `docs/phase1/`
+- Two-way navigation: homepage `▶ Play Latest` → `docs/phase1/`; game title screen `☣ POKÉHAZARD.DEV` → homepage
+
+### Infrastructure
+- `base` path set to `/poke-hazard/` on build, `/` in dev (no broken asset paths in either env)
+- GH Pages now auto-updates `docs/latest/` on every merge to `main`
+
+---
+
+## [0.3.0] — 2026-05-07 — Node Network Hero Background
+
 ### Added
 - Animated node network background in hero section — 55 drifting nodes connected by proximity edges, with glowing packets traveling along edges in green, red (viral), and purple (mutation)
 
