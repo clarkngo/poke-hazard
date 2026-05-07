@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 
 export default defineConfig(({ command }) => ({
-  base: command === 'build' ? '/poke-hazard/' : '/',
+  base: command === 'build' ? './' : '/',
   build: {
     outDir: 'dist',
     assetsInlineLimit: 0,

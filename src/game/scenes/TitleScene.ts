@@ -143,7 +143,8 @@ export class TitleScene extends Phaser.Scene {
     const saveInfo = hasSave
       ? `LAST SAVE — ${save.player.name} &nbsp;·&nbsp; ${SaveSystem.formatTimestamp(save.timestamp)}`
       : ''
-    const homeUrl = import.meta.env.BASE_URL
+    // '../' goes up one level from phase1/ or latest/ back to the landing page
+    const homeUrl = import.meta.env.DEV ? '/' : '../'
 
     return `
       <a href="${homeUrl}" class="title-home-link">☣ POKÉHAZARD.DEV</a>
